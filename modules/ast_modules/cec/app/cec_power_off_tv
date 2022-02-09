@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cec_send ff 36
+cec_send ff 36

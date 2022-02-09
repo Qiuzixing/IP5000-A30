@@ -1,0 +1,108 @@
+#! /bin/sh
+. /usr/local/bin/include.sh
+NETWORK_CARD=`astparam g network_card`
+if echo "$NETWORK_CARD" | grep -q "not defined" ; then
+	NETWORK_CARD='eth0'
+fi
+	case "$1" in  
+		deconfig) 
+					echo "udhcpc deconfig"
+					#echo "Kill avahi-autoipd"
+					#/sbin/avahi-autoipd -k eth0
+					#ifconfig $interface:dhcp down
+					ifconfig $interface:dhcp 0.0.0.0 up
+					echo "dhcp deconfig" > /var/info_local 2>/dev/null
+					#ifconfig eth1 0.0.0.0
+					;;
+		bound)
+					echo "udhcpc bound"
+					if /sbin/avahi-autoipd -c $NETWORK_CARD; then
+						echo "Stop avahi-autoipd"
+						/sbin/avahi-autoipd -k $NETWORK_CARD
+					fi
+					[ -n "$broadcast" ] && BROADCAST="broadcast $broadcast"
+					[ -n "subnet" ] && NETMASK="netmask $subnet"
+					ifconfig $interface:dhcp $ip $BROADCAST $NETMASK up
+					query_board_type
+					astparam s sec_priority_net_status $IP_VALID
+					astparam s third_priority_board_status
+					control_net_and_board_led_status
+					if [ -n "$router" ]; then
+						while route del default gw 0.0.0.0 2>/dev/null; do
+							echo "deleting default gw..."
+						done
+					fi
+					for i in $router; do
+						route add default gw $i
+					done
+					if [ $NETWORK_CARD = 'eth0' ];then
+						/usr/local/bin/ast_send_event -1 "e_ip_got::$ip"
+					else
+						/usr/local/bin/ast_send_event -1 "e_sec_ip_got"
+					fi
+					lmparam s MY_NETMASK $subnet
+					lmparam s MY_GATEWAYIP $i
+					#ifconfig eth1 $eth1
+					;;
+		leasefail)
+					echo "udhcpc leasefail"
+					query_board_type
+					astparam s sec_priority_net_status $DHCP_FAIL
+					astparam s third_priority_board_status $DHCP_FAIL
+					control_net_and_board_led_status
+					echo "dhcp client leasefail" > /var/info_local 2>/dev/null
+					#ifconfig eth0 $eth0 
+					#ifconfig eth1 $eth1
+					#echo "Start avahi-autoipd"
+					#/sbin/avahi-autoipd -wD eth0
+					if ! /sbin/avahi-autoipd -c $NETWORK_CARD; then
+						echo "Start avahi-autoipd"
+						if [ "$MODEL_NUMBER" = "KDS-DEC7" -o "$MODEL_NUMBER" = "WP-DEC7" ]; then
+							if [ $NETWORK_CARD = 'eth0' ];then
+								/sbin/avahi-autoipd -D eth0 --start=192.168.1.40 --script=/etc/avahi/avahi-autoipd.action --debug
+							else
+								/sbin/avahi-autoipd -D $NETWORK_CARD --start=169.254.1.40 --script=/etc/avahi/avahi-autoipd.action --debug -n
+							fi
+						else
+							if [ $NETWORK_CARD = 'eth0' ];then
+								/sbin/avahi-autoipd -D eth0 --start=192.168.1.39 --script=/etc/avahi/avahi-autoipd.action
+							else
+								/sbin/avahi-autoipd -D $NETWORK_CARD --start=169.254.1.39 --script=/etc/avahi/avahi-autoipd.action -n
+							fi
+						fi
+					fi
+					;;
+		renew)
+					echo "udhcpc renew"
+					echo "dhcp renew" > /var/info_local 2>/dev/null
+					;;
+		nak)
+					echo "udhcpc nak"
+					echo "dhcp nak" > /var/info_local 2>/dev/null
+	esac	
+
+
+
+
+#        deconfig: This argument is used when udhcpc starts, and
+#       when a leases is lost. The script must put the interface in an
+#        up, but deconfigured state, ie: ifconfig $interface 0.0.0.0.
+
+#        bound: This argument is used when udhcpc moves from an
+#        unbound, to a bound state. All of the paramaters are set in
+#        enviromental variables, The script should configure the interface,
+#        and set any other relavent parameters (default gateway, dns server,
+#        etc).
+
+#        renew: This argument is used when a DHCP lease is renewed. All of
+#        the paramaters are set in enviromental variables. This argument is
+#        used when the interface is already configured, so the IP address,
+#        will not change, however, the other DHCP paramaters, such as the
+#        default gateway, subnet mask, and dns server may change.
+                                                                                
+#        nak: This argument is used with udhcpc receives a NAK message.
+#        The script with the deconfig argument will be called directly
+#        afterwards, so no changes to the network interface are neccessary.
+#        This hook is provided for purely informational purposes (the
+#        message option may contain a reason for the NAK).
+

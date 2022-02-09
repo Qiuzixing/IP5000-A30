@@ -1,0 +1,76 @@
+# Makefile.param 
+# Only global variable should be defined here.
+# All the variables must be used as "export" and "?=".
+# Otherwise, there will be some errors, when Makefile.param is nested.
+
+# Use this file as the following sample
+include $(AST_SDK_ROOT)/ast.cfg
+
+# Define the default OS link directory.
+#export ARCH=arm
+
+# Whether open -g 
+#export GDB?=y
+export GDB?=n
+
+export AUTOTEST?=n
+
+export TARGET_FOLDER_NAME=$(TARGET)-$(CONFIG)
+
+export PARAM_FILE
+export SDK_ROOT ?= $(shell cd `dirname $(PARAM_FILE)`; pwd)
+
+export PREFIX = $(SDK_ROOT)/prefix
+export IMAGES_DIR = $(SDK_ROOT)/images
+export VERSION_FILE = $(SDK_ROOT)/version.h
+export VERSION = $(shell cat $(VERSION_FILE))
+export BUILD_DATE = $(shell date -uR)
+#export STRIP = strip
+
+# Define cross compiler
+#ifeq ($(ARCH),arm)
+#	export CROSS_COMPILE = /home/yangmengyu/ip5000_web/crosstool/gcc-3.4.2-glibc-2.3.3/arm-aspeed-linux-gnu/bin/arm-aspeed-linux-gnu-
+#	export CROSS = /home/yangmengyu/ip5000_web/crosstool/gcc-3.4.2-glibc-2.3.3/arm-aspeed-linux-gnu/bin/arm-aspeed-linux-gnu-
+#	export OSDRV_CROSS = /home/yangmengyu/ip5000_web/crosstool/gcc-3.4.2-glibc-2.3.3/arm-aspeed-linux-gnu/bin/arm-aspeed-linux-gnu
+#	export TOOLS_DIR = tools/arm/
+#	export HOST_NAME = /home/yangmengyu/ip5000_web/crosstool/gcc-3.4.2-glibc-2.3.3/arm-aspeed-linux-gnu/bin/arm-aspeed-linux-gnu
+#	export CHOST=/home/yangmengyu/ip5000_web/crosstool/gcc-3.4.2-glibc-2.3.3/arm-aspeed-linux-gnu/bin/arm-aspeed-linux-gnu
+#else
+#	export TOOLS_DIR = tools/x86/
+#endif
+
+export CC := $(CROSS_COMPILE)gcc
+export CXX := $(CROSS_COMPILE)g++
+export AR := $(CROSS_COMPILE)ar
+export RANLIB := $(CROSS_COMPILE)ranlib
+export LINK = $(CROSS_COMPILE)gcc
+export LD := $(CROSS_COMPILE)ld
+export STRIP = $(CROSS_COMPILE)strip
+
+
+ifeq ($(ARCH),arm)
+	export CFLAGS :=-D__linux__ -DEV_SELECT=1  -DNO_CLOCK_MONOTONIC -pipe
+else
+	export CFLAGS :=-D__linux__ -D__IA64__ -pipe
+endif
+
+ifeq ($(GDB), y)
+	export CFLAGS += -g -ggdb -g3
+else
+#	export CFLAGS += -O2
+endif
+
+ifeq ($(AUTOTEST), y)
+	export CFLAGS += -D__AUTOTEST__
+else
+		
+endif
+
+export DEV_NAME = web
+export DIR_NAME = $(DEV_NAME)_$(VERSION)
+export BIN_NAME = $(IMAGES_DIR)/$(DIR_NAME).bin
+
+
+
+# End!!
+

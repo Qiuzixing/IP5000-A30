@@ -1,0 +1,20 @@
+#!/bin/sh
+
+# Sid 20180110 mute the codec 1st
+echo 0 > /sys/devices/platform/1500_i2s/analog_out_vol
+# save configs to flash
+#reset rtl chip
+echo 0 > /sys/class/leds/rtl_reset/brightness
+sync
+sleep 1
+sync
+sync
+sync
+#kill the following processes so that the data partition can be successfully unmounted
+pkill -9 lcd_display
+pkill -9 p3ktcp
+pkill -9 web
+pkill -9 GUI
+
+umount /data
+/bin/busybox reboot

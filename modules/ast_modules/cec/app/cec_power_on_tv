@@ -1,0 +1,4 @@
+#!/bin/bash
+
+cec_send 40 04
+cec_send 40 04
